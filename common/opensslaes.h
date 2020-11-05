@@ -66,7 +66,8 @@ private:
 
     /* "opaque" encryption, decryption ctx structures that libcrypto uses to record
      * status of enc/dec operations */
-    EVP_CIPHER_CTX m_encoder, m_decoder;
+    EVP_CIPHER_CTX *m_encoder;
+    EVP_CIPHER_CTX *m_decoder;
 };
 
 #endif // OpensslAES_H
