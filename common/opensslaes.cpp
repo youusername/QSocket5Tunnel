@@ -28,8 +28,8 @@ OpensslAES::OpensslAES(const QByteArray &key, const QByteArray &salt, Type type,
 
 OpensslAES::~OpensslAES()
 {
-    EVP_CIPHER_CTX_cleanup(&m_encoder);
-    EVP_CIPHER_CTX_cleanup(&m_decoder);
+    EVP_CIPHER_CTX_cleanup(m_encoder);
+    EVP_CIPHER_CTX_cleanup(m_decoder);
 }
 
 /**
@@ -64,11 +64,13 @@ bool OpensslAES::init(const QByteArray &keyData,
         printf("Key size is %d bytes - should be %d bits\n", i, m_blockSize);
         return false;
     }
-
-    EVP_CIPHER_CTX_init(&m_encoder);
-    EVP_EncryptInit_ex(&m_encoder, evpCipher, 0, key, iv);
-    EVP_CIPHER_CTX_init(&m_decoder);
-    EVP_DecryptInit_ex(&m_decoder, evpCipher, 0, key, iv);
+    m_encoder = EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_init(m_encoder);
+    EVP_EncryptInit_ex(m_encoder, evpCipher, 0, key, iv);
+  
+    m_decoder = EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_init(m_decoder);
+    EVP_DecryptInit_ex(m_decoder, evpCipher, 0, key, iv);
 
     return true;
 }
@@ -132,21 +134,21 @@ QByteArray OpensslAES::encrypt(const QByteArray &plainData)
     unsigned char *ciphertext = (unsigned char *)malloc(c_len);
 
     /* allows reusing of 'e' for multiple encryption cycles */
-    if (!EVP_EncryptInit_ex(&m_encoder, 0, 0, 0, 0)) {
+    if (!EVP_EncryptInit_ex(m_encoder, 0, 0, 0, 0)) {
         printf("ERROR in EVP_EncryptInit_ex \n");
         return QByteArray();
     }
 
     /* update ciphertext, c_len is filled with the length of ciphertext generated,
         *len is the size of plaintext in bytes */
-    if (!EVP_EncryptUpdate(&m_encoder, ciphertext, &c_len,
+    if (!EVP_EncryptUpdate(m_encoder, ciphertext, &c_len,
                            (const unsigned char *)plainData.constData(), plainData.size())) {
         printf("ERROR in EVP_EncryptUpdate \n");
         return QByteArray();
     }
 
     /* update ciphertext with the final remaining bytes */
-    if (!EVP_EncryptFinal_ex(&m_encoder, ciphertext+c_len, &f_len)) {
+    if (!EVP_EncryptFinal_ex(m_encoder, ciphertext+c_len, &f_len)) {
         printf("ERROR in EVP_EncryptFinal_ex \n");
         return QByteArray();
     }
@@ -166,18 +168,18 @@ QByteArray OpensslAES::decrypt(const QByteArray &cipherData)
     int p_len = cipherData.size(), f_len = 0;
     unsigned char *plaintext = (unsigned char *)malloc(p_len);
 
-    if (!EVP_DecryptInit_ex(&m_decoder, 0, 0, 0, 0)) {
+    if (!EVP_DecryptInit_ex(m_decoder, 0, 0, 0, 0)) {
         printf("ERROR in EVP_DecryptInit_ex\n");
         return QByteArray();
     }
 
-    if (!EVP_DecryptUpdate(&m_decoder, plaintext, &p_len,
+    if (!EVP_DecryptUpdate(m_decoder, plaintext, &p_len,
                            (const unsigned char*)cipherData.constData(), cipherData.size())) {
         printf("ERROR in EVP_DecryptUpdate\n");
         return QByteArray();
     }
 
-    if (!EVP_DecryptFinal_ex(&m_decoder, plaintext+p_len, &f_len)) {
+    if (!EVP_DecryptFinal_ex(m_decoder, plaintext+p_len, &f_len)) {
         printf("ERROR in EVP_DecryptFinal_ex\n");
         return QByteArray();
     }
